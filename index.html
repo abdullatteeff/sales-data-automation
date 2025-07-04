@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase Compat Scripts (Stable) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="w-full max-w-md bg-white p-6 rounded-xl shadow-lg">
+    <!-- =======================
+         Auth Box (Login/Register)
+    ======================== -->
+    <div id="authBox">
+      <h2 class="text-xl font-bold mb-4 text-center">Login / Register</h2>
+      <input type="email" id="email" placeholder="Email" class="w-full p-2 border mb-2 rounded" />
+      <input type="password" id="password" placeholder="Password" class="w-full p-2 border mb-4 rounded" />
+      <div id="authError" class="text-red-600 text-sm mb-4 hidden"></div>
+      <div class="flex justify-between">
+        <button onclick="login()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Login</button>
+        <button onclick="register()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Register</button>
+      </div>
+    </div>
+
+    <!-- =======================
+         Form Box (Sales Entry)
+    ======================== -->
+    <div id="formBox" class="hidden">
+      <h2 class="text-xl font-bold mb-4 text-center">Sales Entry</h2>
+      <form id="salesForm" class="space-y-3">
+        <input type="date" id="date" class="w-full p-2 border rounded" required />
+        <input type="text" id="size" placeholder="Size" class="w-full p-2 border rounded" required />
+        <input type="text" id="type" placeholder="Type" class="w-full p-2 border rounded" required />
+        <!-- Quantity Field: defaults to 1, not required -->
+        <input type="number" id="quantity" placeholder="Quantity (default 1)" class="w-full p-2 border rounded" min="1" value="1" />
+        <input type="number" id="price" placeholder="Price" class="w-full p-2 border rounded" required />
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Submit</button>
+      </form>
+      <p id="successMsg" class="text-green-600 text-center mt-3 hidden">Submitted!</p>
+      <button onclick="logout()" class="w-full mt-4 bg-red-600 text-white py-2 rounded hover:bg-red-700">Logout</button>
+    </div>
+  </div>
+
+  <!-- =======================
+       Script Section
+  ======================== -->
+  <script>
+    // Wait for DOM to load
+    document.addEventListener("DOMContentLoaded", function () {
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyChE8qoxSNb597mOEY1M9GcrSWqlzuNowA",
+        authDomain: "sales-90a3d.firebaseapp.com",
+        projectId: "sales-90a3d",
+        storageBucket: "sales-90a3d.appspot.com",
+        messagingSenderId: "846270085081",
+        appId: "1:846270085081:web:130d33404786c5d2014bc8",
+        measurementId: "G-MTVZKTGM4L"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+
+      // Get UI elements
+      const authBox = document.getElementById("authBox");
+      const formBox = document.getElementById("formBox");
+      const form = document.getElementById("salesForm");
+      const successMsg = document.getElementById("successMsg");
+      const authError = document.getElementById("authError");
+
+      // Listen for auth state changes
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          authBox.classList.add("hidden");
+          formBox.classList.remove("hidden");
+          authError.classList.add("hidden");
+        } else {
+          authBox.classList.remove("hidden");
+          formBox.classList.add("hidden");
+        }
+      });
+
+      // Login function
+      window.login = function () {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        auth.signInWithEmailAndPassword(email, password)
+          .then(() => {
+            authError.classList.add("hidden");
+          })
+          .catch(error => {
+            authError.textContent = "Login failed: " + error.message;
+            authError.classList.remove("hidden");
+          });
+      };
+
+      // Register function
+      window.register = function () {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        auth.createUserWithEmailAndPassword(email, password)
+          .then(() => {
+            authError.classList.add("hidden");
+          })
+          .catch(error => {
+            authError.textContent = "Registration failed: " + error.message;
+            authError.classList.remove("hidden");
+          });
+      };
+
+      // Logout function
+      window.logout = function () {
+        auth.signOut();
+      };
+
+      // Handle sales form submission
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        // Prepare form data
+        const date = new Date(document.getElementById("date").value).toLocaleDateString("en-CA");
+        const size = document.getElementById("size").value.trim().toUpperCase();
+        const type = document.getElementById("type").value.trim().toLowerCase();
+        const quantity = parseInt(document.getElementById("quantity").value) || 1;
+        const price = parseFloat(document.getElementById("price").value);
+
+        // Create an array of entries, one for each quantity
+        const entries = [];
+        for (let i = 0; i < quantity; i++) {
+          entries.push({
+            date,
+            size,
+            type,
+            quantity: 1, // Each entry represents a single item
+            price
+          });
+        }
+
+        // Send each entry as a separate POST request
+        Promise.all(entries.map(entry =>
+          fetch("https://script.google.com/macros/s/AKfycbyWTurZ0Bw_xwcuqICYUwsPXSeHyGcq-IvHQcKxjYtAx6rCiQqkiOrgT2PmRSSsCNo_/exec", {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(entry)
+          })
+        ))
+          .then(() => {
+            form.reset();
+            document.getElementById("quantity").value = 1;
+            successMsg.classList.remove("hidden");
+            setTimeout(() => successMsg.classList.add("hidden"), 3000);
+          })
+          .catch(() => {
+            alert("Submission failed.");
+          });
+      });
+    });
+  </script>
+</body>
+</html>
